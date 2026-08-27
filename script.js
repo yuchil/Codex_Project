@@ -1,67 +1,41 @@
 "use strict";
 
-const STORAGE_KEY = "warm-todo.tasks.v2";
-const LEGACY_STORAGE_KEY = "warm-todo.tasks.v1";
-const STATUSES = ["todo", "process", "done"];
-const VALID_STATUSES = new Set(STATUSES);
+const STORAGE_KEY = "warm-todo.tasks.v1";
 const VALID_CATEGORIES = new Set(["work", "life"]);
 
-const form = document.querySelector("#task-form");
+const taskForm = document.querySelector("#task-form");
 const taskInput = document.querySelector("#task-input");
+const categorySelect = document.querySelector("#category-select");
 const assigneeInput = document.querySelector("#assignee-input");
-const categoryInput = document.querySelector("#category-input");
 const taskError = document.querySelector("#task-error");
-const taskCount = document.querySelector("#task-count");
-const board = document.querySelector("#board");
+const taskList = document.querySelector("#task-list");
+const taskSummary = document.querySelector("#task-summary");
+const emptyState = document.querySelector("#empty-state");
+const emptyTitle = emptyState.querySelector("h3");
+const emptyDescription = emptyState.querySelector("p");
 const filterButtons = [...document.querySelectorAll(".filter-button")];
-const columns = Object.fromEntries(STATUSES.map((status) => [
-  status, document.querySelector(`[data-column="${status}"]`),
-]));
 
 let tasks = loadTasks();
 let activeFilter = "all";
-let dragState = null;
-
-function createId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function normalizeTasks(source, legacy = false) {
-  if (!Array.isArray(source)) return [];
-  const normalized = source
-    .filter((task) => task && typeof task === "object" && typeof task.text === "string")
-    .map((task, index) => ({
-      id: typeof task.id === "string" ? task.id : createId(),
-      text: task.text.trim(),
-      assignee: typeof task.assignee === "string" ? task.assignee.trim() : "",
-      category: VALID_CATEGORIES.has(task.category) ? task.category : "work",
-      status: legacy ? (task.completed ? "done" : "todo") :
-        (VALID_STATUSES.has(task.status) ? task.status : "todo"),
-      order: Number.isFinite(task.order) ? task.order : index,
-      createdAt: Number.isFinite(task.createdAt) ? task.createdAt : Date.now() - index,
-    }))
-    .filter((task) => task.text);
-
-  STATUSES.forEach((status) => {
-    normalized.filter((task) => task.status === status)
-      .sort((a, b) => a.order - b.order || b.createdAt - a.createdAt)
-      .forEach((task, index) => { task.order = index; });
-  });
-  return normalized;
-}
 
 function loadTasks() {
   try {
-    const current = localStorage.getItem(STORAGE_KEY);
-    if (current) return normalizeTasks(JSON.parse(current));
-    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (!legacy) return [];
-    const migrated = normalizeTasks(JSON.parse(legacy), true);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-    return migrated;
+    const storedValue = localStorage.getItem(STORAGE_KEY);
+    if (!storedValue) return [];
+
+    const parsedTasks = JSON.parse(storedValue);
+    if (!Array.isArray(parsedTasks)) return [];
+
+    return parsedTasks
+      .filter((task) => task && typeof task.text === "string" && task.text.trim())
+      .map((task) => ({
+        id: String(task.id || createId()),
+        text: task.text.trim().slice(0, 200),
+        category: VALID_CATEGORIES.has(task.category) ? task.category : "work",
+        assignee: typeof task.assignee === "string" ? task.assignee.trim().slice(0, 60) : "",
+        completed: Boolean(task.completed),
+        createdAt: typeof task.createdAt === "string" ? task.createdAt : new Date().toISOString(),
+      }));
   } catch {
     return [];
   }
@@ -71,118 +45,94 @@ function saveTasks() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   } catch {
-    // The current session remains usable if browser storage is unavailable.
+    // The app remains usable when storage is unavailable or full.
   }
 }
 
-function orderedTasks(status, applyFilter = true) {
-  return tasks.filter((task) => task.status === status)
-    .filter((task) => !applyFilter || activeFilter === "all" || task.category === activeFilter)
-    .sort((a, b) => a.order - b.order || b.createdAt - a.createdAt);
+function createId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function createTaskElement(task) {
-  const item = document.createElement("article");
-  item.className = `task-item${task.status === "done" ? " completed" : ""}`;
+  const item = document.createElement("li");
+  item.className = `task-item${task.completed ? " is-completed" : ""}`;
   item.dataset.id = task.id;
-  item.dataset.status = task.status;
-  item.setAttribute("role", "listitem");
 
-  const dragHandle = document.createElement("button");
-  dragHandle.type = "button";
-  dragHandle.className = "drag-handle";
-  dragHandle.textContent = "⠿";
-  dragHandle.setAttribute("aria-label", `拖曳「${task.text}」`);
-  dragHandle.addEventListener("pointerdown", (event) => startDrag(event, task.id));
+  const checkButton = document.createElement("button");
+  checkButton.className = "task-check";
+  checkButton.type = "button";
+  checkButton.dataset.action = "toggle";
+  checkButton.setAttribute("aria-label", task.completed ? `將「${task.text}」標示為未完成` : `完成「${task.text}」`);
+  checkButton.setAttribute("aria-pressed", String(task.completed));
+  checkButton.textContent = "✓";
 
-  const main = document.createElement("div");
-  main.className = "task-main";
+  const content = document.createElement("div");
+  content.className = "task-content";
+
   const title = document.createElement("p");
   title.className = "task-title";
   title.textContent = task.text;
-  main.append(title);
 
   const meta = document.createElement("div");
   meta.className = "task-meta";
-  const tag = document.createElement("span");
-  tag.className = `category-tag ${task.category}`;
-  tag.textContent = task.category === "work" ? "工作" : "生活";
-  meta.append(tag);
+
+  const badge = document.createElement("span");
+  badge.className = `category-badge ${task.category}`;
+  badge.textContent = task.category === "work" ? "工作" : "生活";
+  meta.append(badge);
+
   if (task.assignee) {
     const assignee = document.createElement("span");
     assignee.className = "assignee";
     assignee.textContent = `負責人：${task.assignee}`;
     meta.append(assignee);
   }
-  main.append(meta);
 
-  const actions = document.createElement("div");
-  actions.className = "task-actions";
-  const statusSelect = document.createElement("select");
-  statusSelect.className = "status-select";
-  statusSelect.setAttribute("aria-label", `變更「${task.text}」的狀態`);
-  [["todo", "To-do"], ["process", "Process"], ["done", "Done"]].forEach(([value, label]) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    option.selected = task.status === value;
-    statusSelect.append(option);
-  });
-  statusSelect.addEventListener("change", () => moveTask(task.id, statusSelect.value, 0));
+  content.append(title, meta);
 
   const deleteButton = document.createElement("button");
-  deleteButton.type = "button";
   deleteButton.className = "delete-button";
-  deleteButton.textContent = "×";
+  deleteButton.type = "button";
+  deleteButton.dataset.action = "delete";
   deleteButton.setAttribute("aria-label", `刪除「${task.text}」`);
-  deleteButton.addEventListener("click", () => deleteTask(task.id));
-  actions.append(statusSelect, deleteButton);
-  item.append(dragHandle, main, actions);
+  deleteButton.textContent = "×";
+
+  item.append(checkButton, content, deleteButton);
   return item;
 }
 
 function render() {
-  STATUSES.forEach((status) => {
-    const visible = orderedTasks(status);
-    columns[status].replaceChildren(...visible.map(createTaskElement));
-    document.querySelector(`[data-count="${status}"]`).textContent = visible.length;
-    document.querySelector(`[data-empty="${status}"]`).hidden = visible.length > 0;
-  });
-  const doneCount = tasks.filter((task) => task.status === "done").length;
-  taskCount.textContent = tasks.length ? `${doneCount} / ${tasks.length} 項已完成` : "0 項任務";
-}
+  const visibleTasks = activeFilter === "all"
+    ? tasks
+    : tasks.filter((task) => task.category === activeFilter);
 
-function normalizeOrders() {
-  STATUSES.forEach((status) => {
-    orderedTasks(status, false).forEach((task, index) => { task.order = index; });
-  });
-}
+  taskList.replaceChildren(...visibleTasks.map(createTaskElement));
 
-function moveTask(id, targetStatus, visibleIndex) {
-  if (!VALID_STATUSES.has(targetStatus)) return;
-  const task = tasks.find((item) => item.id === id);
-  if (!task) return;
-  const sourceStatus = task.status;
-  const targetVisible = orderedTasks(targetStatus).filter((item) => item.id !== id);
-  const beforeTask = targetVisible[visibleIndex];
-  const fullTarget = orderedTasks(targetStatus, false).filter((item) => item.id !== id);
-  let insertionIndex = beforeTask ? fullTarget.findIndex((item) => item.id === beforeTask.id) : fullTarget.length;
-  if (insertionIndex < 0) insertionIndex = fullTarget.length;
+  const remainingCount = tasks.filter((task) => !task.completed).length;
+  taskSummary.textContent = tasks.length
+    ? `共 ${tasks.length} 件，還有 ${remainingCount} 件待完成`
+    : "目前沒有任務";
 
-  task.status = targetStatus;
-  fullTarget.splice(insertionIndex, 0, task);
-  fullTarget.forEach((item, index) => { item.order = index; });
-  if (sourceStatus !== targetStatus) {
-    orderedTasks(sourceStatus, false).filter((item) => item.id !== id)
-      .forEach((item, index) => { item.order = index; });
+  const isEmpty = visibleTasks.length === 0;
+  emptyState.hidden = !isEmpty;
+
+  if (tasks.length === 0) {
+    emptyTitle.textContent = "今天還沒有任務";
+    emptyDescription.textContent = "從上方新增一件想完成的事吧。";
+  } else if (isEmpty) {
+    const label = activeFilter === "work" ? "工作" : "生活";
+    emptyTitle.textContent = `沒有${label}任務`;
+    emptyDescription.textContent = "切換其他分類，或新增一件新任務。";
   }
-  normalizeOrders();
-  saveTasks();
-  render();
 }
 
-function addTask(event) {
+taskForm.addEventListener("submit", (event) => {
   event.preventDefault();
+
   const text = taskInput.value.trim();
   if (!text) {
     taskInput.setAttribute("aria-invalid", "true");
@@ -190,121 +140,61 @@ function addTask(event) {
     taskInput.focus();
     return;
   }
-  orderedTasks("todo", false).forEach((task) => { task.order += 1; });
-  tasks.push({
-    id: createId(), text, assignee: assigneeInput.value.trim(), category: categoryInput.value,
-    status: "todo", order: 0, createdAt: Date.now(),
-  });
-  saveTasks();
-  form.reset();
+
   taskInput.removeAttribute("aria-invalid");
   taskError.textContent = "";
+
+  tasks.unshift({
+    id: createId(),
+    text: text.slice(0, 200),
+    category: VALID_CATEGORIES.has(categorySelect.value) ? categorySelect.value : "work",
+    assignee: assigneeInput.value.trim().slice(0, 60),
+    completed: false,
+    createdAt: new Date().toISOString(),
+  });
+
+  saveTasks();
+  taskForm.reset();
+  categorySelect.value = "work";
   taskInput.focus();
   render();
-}
+});
 
-function deleteTask(id) {
-  tasks = tasks.filter((task) => task.id !== id);
-  normalizeOrders();
-  saveTasks();
-  render();
-}
-
-function setFilter(filter) {
-  activeFilter = filter;
-  filterButtons.forEach((button) => {
-    const active = button.dataset.filter === filter;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  render();
-}
-
-function startDrag(event, id) {
-  if (event.pointerType !== "touch" && event.button !== 0) return;
-  const card = event.currentTarget.closest(".task-item");
-  const rect = card.getBoundingClientRect();
-  const ghost = card.cloneNode(true);
-  ghost.classList.add("drag-ghost");
-  Object.assign(ghost.style, { width: `${rect.width}px`, left: `${rect.left}px`, top: `${rect.top}px` });
-  document.body.append(ghost);
-  card.classList.add("drag-source");
-  document.body.classList.add("is-dragging");
-  dragState = {
-    id, card, ghost, pointerId: event.pointerId,
-    offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top,
-    targetStatus: card.dataset.status,
-    targetIndex: orderedTasks(card.dataset.status).findIndex((task) => task.id === id),
-  };
-  event.currentTarget.setPointerCapture(event.pointerId);
-  event.currentTarget.addEventListener("pointermove", updateDrag);
-  event.currentTarget.addEventListener("pointerup", finishDrag);
-  event.currentTarget.addEventListener("pointercancel", cancelDrag);
-  event.preventDefault();
-}
-
-function updateDrag(event) {
-  if (!dragState || event.pointerId !== dragState.pointerId) return;
-  dragState.ghost.style.left = `${event.clientX - dragState.offsetX}px`;
-  dragState.ghost.style.top = `${event.clientY - dragState.offsetY}px`;
-  dragState.ghost.hidden = true;
-  const underPointer = document.elementFromPoint(event.clientX, event.clientY);
-  dragState.ghost.hidden = false;
-  const column = underPointer?.closest(".board-column");
-  document.querySelectorAll(".board-column").forEach((item) => item.classList.remove("drag-over"));
-  document.querySelectorAll(".drop-indicator").forEach((item) => item.remove());
-  if (!column) {
-    dragState.targetStatus = null;
-    return;
-  }
-  column.classList.add("drag-over");
-  const status = column.dataset.status;
-  const cards = [...columns[status].querySelectorAll(".task-item:not(.drag-source)")];
-  let index = cards.findIndex((card) => event.clientY < card.getBoundingClientRect().top + card.offsetHeight / 2);
-  if (index === -1) index = cards.length;
-  const indicator = document.createElement("div");
-  indicator.className = "drop-indicator";
-  columns[status].insertBefore(indicator, cards[index] || null);
-  dragState.targetStatus = status;
-  dragState.targetIndex = index;
-}
-
-function cleanupDrag() {
-  if (!dragState) return;
-  const handle = dragState.card.querySelector(".drag-handle");
-  handle.removeEventListener("pointermove", updateDrag);
-  handle.removeEventListener("pointerup", finishDrag);
-  handle.removeEventListener("pointercancel", cancelDrag);
-  dragState.card.classList.remove("drag-source");
-  dragState.ghost.remove();
-  document.body.classList.remove("is-dragging");
-  document.querySelectorAll(".board-column").forEach((item) => item.classList.remove("drag-over"));
-  document.querySelectorAll(".drop-indicator").forEach((item) => item.remove());
-}
-
-function finishDrag(event) {
-  if (!dragState || event.pointerId !== dragState.pointerId) return;
-  const { id, targetStatus, targetIndex } = dragState;
-  cleanupDrag();
-  dragState = null;
-  if (targetStatus) moveTask(id, targetStatus, targetIndex);
-}
-
-function cancelDrag() {
-  cleanupDrag();
-  dragState = null;
-}
-
-form.addEventListener("submit", addTask);
 taskInput.addEventListener("input", () => {
   if (taskInput.value.trim()) {
     taskInput.removeAttribute("aria-invalid");
     taskError.textContent = "";
   }
 });
-filterButtons.forEach((button) => button.addEventListener("click", () => setFilter(button.dataset.filter)));
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && dragState) cancelDrag();
+
+taskList.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("button[data-action]");
+  if (!actionButton) return;
+
+  const item = actionButton.closest(".task-item");
+  const taskIndex = tasks.findIndex((task) => task.id === item?.dataset.id);
+  if (taskIndex === -1) return;
+
+  if (actionButton.dataset.action === "toggle") {
+    tasks[taskIndex].completed = !tasks[taskIndex].completed;
+  } else if (actionButton.dataset.action === "delete") {
+    tasks.splice(taskIndex, 1);
+  }
+
+  saveTasks();
+  render();
+});
+
+filterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activeFilter = button.dataset.filter;
+    filterButtons.forEach((candidate) => {
+      const isActive = candidate === button;
+      candidate.classList.toggle("is-active", isActive);
+      candidate.setAttribute("aria-pressed", String(isActive));
+    });
+    render();
+  });
 });
 
 render();
