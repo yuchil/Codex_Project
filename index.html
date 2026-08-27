@@ -42,6 +42,15 @@
           </div>
 
           <div class="field">
+            <label for="priority-select">優先程度</label>
+            <select id="priority-select" name="priority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          <div class="field">
             <label for="assignee-input">負責人 <span>選填</span></label>
             <input
               id="assignee-input"
@@ -59,7 +68,7 @@
         </form>
       </section>
 
-      <section class="tasks-section" aria-labelledby="tasks-title">
+      <section class="board-section" aria-labelledby="tasks-title">
         <div class="section-heading">
           <div>
             <h2 id="tasks-title">我的任務</h2>
@@ -73,13 +82,21 @@
           </div>
         </div>
 
-        <ul id="task-list" class="task-list" aria-label="待辦任務"></ul>
-
-        <div id="empty-state" class="empty-state">
-          <div class="empty-icon" aria-hidden="true">☀</div>
-          <h3>今天還沒有任務</h3>
-          <p>從上方新增一件想完成的事吧。</p>
+        <div class="board" aria-label="任務看板">
+          <section class="board-column column-todo" data-status="todo" aria-labelledby="todo-title">
+            <header class="column-header"><div class="column-title-wrap"><span class="column-dot" aria-hidden="true"></span><h3 id="todo-title">To-do</h3></div><span class="column-count" data-count="todo" aria-label="0 件任務">0</span></header>
+            <div class="column-dropzone" data-dropzone="todo"><ul class="task-list" data-list="todo" aria-label="To-do 任務"></ul><div class="column-empty" data-empty="todo"><span aria-hidden="true">＋</span><p>等待開始的任務</p></div></div>
+          </section>
+          <section class="board-column column-process" data-status="process" aria-labelledby="process-title">
+            <header class="column-header"><div class="column-title-wrap"><span class="column-dot" aria-hidden="true"></span><h3 id="process-title">Process</h3></div><span class="column-count" data-count="process" aria-label="0 件任務">0</span></header>
+            <div class="column-dropzone" data-dropzone="process"><ul class="task-list" data-list="process" aria-label="Process 任務"></ul><div class="column-empty" data-empty="process"><span aria-hidden="true">↻</span><p>正在進行的任務</p></div></div>
+          </section>
+          <section class="board-column column-done" data-status="done" aria-labelledby="done-title">
+            <header class="column-header"><div class="column-title-wrap"><span class="column-dot" aria-hidden="true"></span><h3 id="done-title">Done</h3></div><span class="column-count" data-count="done" aria-label="0 件任務">0</span></header>
+            <div class="column-dropzone" data-dropzone="done"><ul class="task-list" data-list="done" aria-label="Done 任務"></ul><div class="column-empty" data-empty="done"><span aria-hidden="true">✓</span><p>已完成的任務</p></div></div>
+          </section>
         </div>
+        <p id="board-announcement" class="sr-only" aria-live="polite"></p>
       </section>
     </main>
   </body>
