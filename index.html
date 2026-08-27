@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="一個簡約、溫暖，能分類與保存任務的待辦清單。"
+    />
+    <title>暖日待辦</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <p class="eyebrow">MY LITTLE LIST</p>
+        <h1>暖日待辦</h1>
+        <p class="subtitle">把今天放進清單裡，一件一件慢慢完成。</p>
+      </header>
+
+      <section class="composer card" aria-labelledby="composer-title">
+        <h2 id="composer-title" class="visually-hidden">新增任務</h2>
+        <form id="task-form" novalidate>
+          <div class="field field-task">
+            <label for="task-input">任務內容</label>
+            <input
+              id="task-input"
+              name="task"
+              type="text"
+              placeholder="例如：整理本週工作計畫"
+              maxlength="160"
+              autocomplete="off"
+              aria-describedby="task-error"
+              required
+            />
+            <p id="task-error" class="field-error" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <label for="assignee-input">負責人 <span>選填</span></label>
+            <input
+              id="assignee-input"
+              name="assignee"
+              type="text"
+              placeholder="輸入姓名"
+              maxlength="60"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="field">
+            <label for="category-input">分類</label>
+            <select id="category-input" name="category">
+              <option value="work">工作</option>
+              <option value="life">生活</option>
+            </select>
+          </div>
+
+          <button class="add-button" type="submit">新增任務</button>
+        </form>
+      </section>
+
+      <section class="tasks-section" aria-labelledby="tasks-title">
+        <div class="tasks-toolbar">
+          <div>
+            <p class="section-kicker">TODAY</p>
+            <h2 id="tasks-title">我的任務</h2>
+          </div>
+          <p id="task-count" class="task-count" aria-live="polite"></p>
+        </div>
+
+        <div class="filters" role="group" aria-label="篩選任務分類">
+          <button class="filter-button active" type="button" data-filter="all" aria-pressed="true">全部</button>
+          <button class="filter-button" type="button" data-filter="work" aria-pressed="false">工作</button>
+          <button class="filter-button" type="button" data-filter="life" aria-pressed="false">生活</button>
+        </div>
+
+        <ul id="task-list" class="task-list" aria-label="任務清單"></ul>
+
+        <div id="empty-state" class="empty-state" hidden>
+          <span aria-hidden="true">☀</span>
+          <h3 id="empty-title">還沒有任務</h3>
+          <p id="empty-message">從上方新增第一件想完成的事吧。</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
