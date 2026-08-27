@@ -45,7 +45,7 @@ button {
 }
 
 .app-shell {
-  width: min(880px, calc(100% - 40px));
+  width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
   padding: 72px 0 80px;
 }
@@ -239,10 +239,10 @@ input[aria-invalid="true"] {
 
 .task-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  padding: 18px 18px 18px 20px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  align-items: start;
+  padding: 15px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -347,6 +347,167 @@ input[aria-invalid="true"] {
   color: var(--danger);
 }
 
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.board-column {
+  min-height: 390px;
+  padding: 15px;
+  background: rgba(255, 250, 243, 0.62);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 2px 3px;
+}
+
+.column-header > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.column-header h3 {
+  margin: 0;
+  font-family: Georgia, "Noto Serif TC", serif;
+  font-size: 1.08rem;
+  font-weight: 650;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c99370;
+}
+
+.status-dot.process { background: #d29c54; }
+.status-dot.done { background: #7e9871; }
+
+.column-count {
+  display: grid;
+  min-width: 27px;
+  height: 27px;
+  padding: 0 7px;
+  place-items: center;
+  border-radius: 999px;
+  background: #efe2d5;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.column-tasks {
+  display: grid;
+  gap: 10px;
+  min-height: 12px;
+}
+
+.column-empty {
+  margin-top: 4px;
+  padding: 34px 14px;
+  border: 1px dashed #d9c3b2;
+  border-radius: 13px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.column-empty[hidden] {
+  display: none;
+}
+
+.drag-handle {
+  width: 30px;
+  height: 34px;
+  margin: -4px 0 0 -6px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b69b8b;
+  font-size: 1.25rem;
+  line-height: 1;
+  touch-action: none;
+  cursor: grab;
+}
+
+.drag-handle:hover {
+  background: #f4e8dd;
+  color: var(--accent);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.task-actions {
+  display: flex;
+  grid-column: 2;
+  gap: 7px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+}
+
+.status-select {
+  width: auto;
+  max-width: 116px;
+  height: 34px;
+  padding: 0 26px 0 9px;
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 650;
+}
+
+.delete-button {
+  width: 34px;
+  height: 34px;
+}
+
+.board-column.drag-over {
+  background: rgba(244, 217, 202, 0.48);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(201, 111, 74, 0.18);
+}
+
+.drag-source {
+  opacity: 0.25;
+}
+
+.drag-ghost {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0.92;
+  transform: rotate(1.5deg) scale(1.02);
+  box-shadow: 0 18px 38px rgba(73, 54, 45, 0.2);
+}
+
+.drop-indicator {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(201, 111, 74, 0.13);
+}
+
+.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
 .task-item.completed {
   opacity: 0.63;
 }
@@ -412,11 +573,23 @@ input[aria-invalid="true"] {
   .add-button {
     margin-top: 4px;
   }
+
+  .board {
+    grid-template-columns: repeat(3, minmax(285px, 1fr));
+    padding: 0 2px 14px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  .board-column {
+    scroll-snap-align: start;
+  }
 }
 
 @media (max-width: 480px) {
   .app-shell {
-    width: min(100% - 22px, 420px);
+    width: calc(100% - 22px);
     padding: 34px 0 54px;
   }
 
@@ -460,10 +633,7 @@ input[aria-invalid="true"] {
     padding-inline: 10px;
   }
 
-  .task-item {
-    gap: 11px;
-    padding: 16px 12px 16px 15px;
-  }
+  .task-item { padding: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

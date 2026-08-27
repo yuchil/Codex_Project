@@ -76,12 +76,22 @@
           <button class="filter-button" type="button" data-filter="life" aria-pressed="false">生活</button>
         </div>
 
-        <ul id="task-list" class="task-list" aria-label="任務清單"></ul>
-
-        <div id="empty-state" class="empty-state" hidden>
-          <span aria-hidden="true">☀</span>
-          <h3 id="empty-title">還沒有任務</h3>
-          <p id="empty-message">從上方新增第一件想完成的事吧。</p>
+        <div id="board" class="board" aria-label="任務看板">
+          <section class="board-column" data-status="todo" aria-labelledby="todo-title">
+            <header class="column-header"><div><span class="status-dot todo" aria-hidden="true"></span><h3 id="todo-title">To-do</h3></div><span class="column-count" data-count="todo">0</span></header>
+            <div class="column-tasks" data-column="todo" role="list" aria-label="To-do 任務"></div>
+            <div class="column-empty" data-empty="todo">從這裡開始，新增第一件任務。</div>
+          </section>
+          <section class="board-column" data-status="process" aria-labelledby="process-title">
+            <header class="column-header"><div><span class="status-dot process" aria-hidden="true"></span><h3 id="process-title">Process</h3></div><span class="column-count" data-count="process">0</span></header>
+            <div class="column-tasks" data-column="process" role="list" aria-label="Process 任務"></div>
+            <div class="column-empty" data-empty="process">拖曳進來，開始處理任務。</div>
+          </section>
+          <section class="board-column" data-status="done" aria-labelledby="done-title">
+            <header class="column-header"><div><span class="status-dot done" aria-hidden="true"></span><h3 id="done-title">Done</h3></div><span class="column-count" data-count="done">0</span></header>
+            <div class="column-tasks" data-column="done" role="list" aria-label="Done 任務"></div>
+            <div class="column-empty" data-empty="done">完成的任務會留在這裡。</div>
+          </section>
         </div>
       </section>
     </main>
